@@ -1,0 +1,81 @@
+import random
+
+class Agent:
+    def __init__(self, 
+                 integrity_weight=0.7,  # probability of acting with integrity
+                 initial_trust=1.0, 
+                 decay_rate=0.05, 
+                 recovery_rate=0.01):
+        self.integrity_weight = integrity_weight
+        self.trust_level = initial_trust
+        self.decay_rate = decay_rate
+        self.recovery_rate = recovery_rate
+
+    def act(self):
+        """
+        Decide action based on integrity weight and apply trust dynamics
+        """
+        # Decide action
+        aligned_with_words = random.random() < self.integrity_weight
+
+        # Systemic bias: even integrity can be misread
+        if aligned_with_words and random.random() < 0.1:
+            aligned_with_words = False
+
+        # Apply trust dynamics
+        if aligned_with_words:
+            self.trust_level += (1 - self.trust_level) * self.recovery_rate
+            reward = 1  # long-term structural benefit
+        else:
+            self.trust_level -= self.trust_level * self.decay_rate
+            reward = 5  # short-term opportunistic gain
+
+        self.trust_level = max(0.0, min(1.0, self.trust_level))
+        return aligned_with_words, self.trust_level, reward
+
+
+class NetworkSimulation:
+    def __init__(self, num_agents=10):
+        self.agents = [Agent() for _ in range(num_agents)]
+
+    def propagate_mistrust(self, source_agent_index):
+        """
+        One agent's loss of trust impacts others (network effect)
+        """
+        for i, agent in enumerate(self.agents):
+            if i != source_agent_index:
+                agent.trust_level *= 0.9
+
+    def run_sequence(self, steps=10):
+        """
+        Simulate multiple steps for all agents
+        Returns:
+            - actions: boolean alignment per agent per step
+            - trust_history: trust levels over time
+            - rewards: reward history
+        """
+        num_agents = len(self.agents)
+        actions = [[False]*steps for _ in range(num_agents)]
+        trust_history = [[0]*steps for _ in range(num_agents)]
+        rewards = [[0]*steps for _ in range(num_agents)]
+
+        for t in range(steps):
+            for i, agent in enumerate(self.agents):
+                aligned, trust, reward = agent.act()
+                actions[i][t] = aligned
+                trust_history[i][t] = trust
+                rewards[i][t] = reward
+
+            # Propagate mistrust after each step
+            for i, agent in enumerate(self.agents):
+                if not actions[i][t]:  # opportunistic/misaligned
+                    self.propagate_mistrust(i)
+
+        return actions, trust_history, rewards
+
+# Example usage
+network = NetworkSimulation(num_agents=5)
+actions, trust_history, rewards = network.run_sequence(steps=7)
+print("Actions:", actions)
+print("Trust Levels:", trust_history)
+print("Rewards:", rewards)
